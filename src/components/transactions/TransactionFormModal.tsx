@@ -10,6 +10,7 @@ import { toISODate } from '@/utils/formatDate'
 import { useCreateTransaction, useUpdateTransaction, useTransaction } from '@/hooks/useTransactions'
 import { useWallets } from '@/hooks/useWallets'
 import { useCategories } from '@/hooks/useCategories'
+import { useSavingsEnvelopes } from '@/hooks/useSavingsEnvelopes'
 import { useUIStore } from '@/store/uiStore'
 import { getCategoryName } from '@/types'
 import { SUPPORTED_CURRENCIES } from '@/lib/currencies'
@@ -38,6 +39,7 @@ const schema = z.object({
   category_id:        z.string().optional(),
   wallet_id:          z.string().optional(),
   to_wallet_id:       z.string().optional(),
+  savings_envelope_id:z.string().optional(),
   description:        z.string().optional(),
   notes:              z.string().optional(),
   person:             z.string().optional(),
@@ -49,12 +51,19 @@ interface Props {
   open: boolean
   onClose: () => void
   editId?: string | null
+  /** Pre-select a transaction type (e.g. from deposit/withdraw shortcuts) */
+  presetType?: TransactionType
+  /** Pre-select a savings envelope */
+  presetEnvelopeId?: string | null
 }
 
-export default function TransactionFormModal({ open, onClose, editId }: Props) {
+export default function TransactionFormModal({
+  open, onClose, editId, presetType, presetEnvelopeId,
+}: Props) {
   const { t }           = useTranslation()
   const { language }    = useUIStore()
-  const { data: wallets = [] } = useWallets()
+  const { data: wallets = [] }  = useWallets()
+  const { data: envelopes = [] } = useSavingsEnvelopes()
   const createTx = useCreateTransaction()
   const updateTx = useUpdateTransaction()
   const { data: existing } = useTransaction(editId ?? null)
@@ -64,20 +73,26 @@ export default function TransactionFormModal({ open, onClose, editId }: Props) {
     useForm<FormValues>({
       resolver: zodResolver(schema),
       defaultValues: {
-        type: 'expense', amount: 0, currency: 'PLN',
-        date: toISODate(new Date()), is_recurring: false,
+        type: presetType ?? 'expense',
+        amount: 0,
+        currency: 'PLN',
+        date: toISODate(new Date()),
+        is_recurring: false,
+        savings_envelope_id: presetEnvelopeId ?? undefined,
       },
     })
 
   const watchedType    = watch('type')
   const watchedCatId   = watch('category_id')
   const categoryType   = TYPE_TO_CATEGORY[watchedType]
+  const isSavingsType  = watchedType === 'savings_deposit' || watchedType === 'savings_withdrawal'
 
   const { data: categories = [] } = useCategories(categoryType)
   const selectedCat = categories.find(c => c.id === watchedCatId)
 
-  // Pre-fill when editing
+  // Pre-fill when editing or applying presets
   useEffect(() => {
+    if (!open) return
     if (existing) {
       reset({
         type: existing.type,
@@ -87,30 +102,37 @@ export default function TransactionFormModal({ open, onClose, editId }: Props) {
         category_id: existing.category_id ?? undefined,
         wallet_id: existing.wallet_id ?? undefined,
         to_wallet_id: existing.to_wallet_id ?? undefined,
+        savings_envelope_id: existing.savings_envelope_id ?? undefined,
         description: existing.description ?? undefined,
         notes: existing.notes ?? undefined,
         person: existing.person ?? undefined,
         is_recurring: existing.is_recurring,
       })
-    } else if (!editId) {
-      reset({ type: 'expense', amount: 0, currency: 'PLN', date: toISODate(new Date()), is_recurring: false })
+    } else {
+      reset({
+        type: presetType ?? 'expense',
+        amount: 0,
+        currency: 'PLN',
+        date: toISODate(new Date()),
+        is_recurring: false,
+        savings_envelope_id: presetEnvelopeId ?? undefined,
+      })
     }
-  }, [existing, editId, reset, open])
+  }, [existing, editId, open, presetType, presetEnvelopeId, reset])
 
   const onSubmit = async (values: FormValues) => {
     const payload = {
       ...values,
-      amount: values.amount,
-      category_id:  values.category_id  || null,
-      wallet_id:    values.wallet_id    || null,
-      to_wallet_id: values.to_wallet_id || null,
-      description:  values.description  || null,
-      notes:        values.notes        || null,
-      person:       values.person       || null,
-      tags:         [] as string[],
-      savings_envelope_id: null,
-      budget_envelope_id:  null,
-      portfolio_id:        null,
+      category_id:          values.category_id          || null,
+      wallet_id:            values.wallet_id            || null,
+      to_wallet_id:         values.to_wallet_id         || null,
+      savings_envelope_id:  values.savings_envelope_id  || null,
+      description:          values.description          || null,
+      notes:                values.notes                || null,
+      person:               values.person               || null,
+      tags:                 [] as string[],
+      budget_envelope_id:   null,
+      portfolio_id:         null,
       amount_in_base_currency: null,
       exchange_rate: null,
       import_hash: null,
@@ -149,6 +171,7 @@ export default function TransactionFormModal({ open, onClose, editId }: Props) {
                     onClick={() => {
                       field.onChange(tp)
                       setValue('category_id', undefined)
+                      setValue('savings_envelope_id', undefined)
                     }}
                     className="flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[10px] font-semibold transition-all"
                     style={{
@@ -203,6 +226,28 @@ export default function TransactionFormModal({ open, onClose, editId }: Props) {
           <label className="label">{t('transactions.date')}</label>
           <input {...register('date')} type="date" className="input" />
         </div>
+
+        {/* ── Savings envelope selector (savings types only) ── */}
+        {isSavingsType && envelopes.length > 0 && (
+          <div>
+            <label className="label">
+              {t('envelopes.savings')} envelope
+            </label>
+            <Controller name="savings_envelope_id" control={control} render={({ field }) => (
+              <select
+                {...field}
+                value={field.value ?? ''}
+                onChange={e => field.onChange(e.target.value || undefined)}
+                className="input"
+              >
+                <option value="">— {t('common.none')} —</option>
+                {envelopes.map(e => (
+                  <option key={e.id} value={e.id}>{e.icon} {e.name}</option>
+                ))}
+              </select>
+            )} />
+          </div>
+        )}
 
         {/* ── Category (only for expense/income/bill) ── */}
         {categoryType && (
