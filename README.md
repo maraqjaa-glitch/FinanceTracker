@@ -9,18 +9,13 @@ Personal and household finance management — a Progressive Web App (PWA) built 
 ### 1. Create a Supabase project
 
 1. Go to [https://app.supabase.com](https://app.supabase.com) and create a new project.
-2. In the **SQL Editor**, run the migrations in order:
+2. In the **SQL Editor**, run the migrations **in order**:
    - `supabase/migrations/001_core_schema.sql`
    - `supabase/migrations/002_triggers.sql`
    - `supabase/migrations/003_system_categories.sql`
-
-   > Copy-paste each file's content into the SQL Editor and click **Run**.
-
 3. In **Authentication → Providers**, ensure **Email** is enabled.
-4. (Optional) Enable **Google** and **Apple** OAuth providers and enter your credentials.
-5. In **Database → Extensions**, enable:
-   - `uuid-ossp` (required)
-   - `pg_cron` (optional, for future scheduled tasks)
+4. *(Optional)* Enable **Google** and **Apple** OAuth providers.
+5. In **Database → Extensions**, enable `uuid-ossp`.
 
 ### 2. Configure environment variables
 
@@ -28,30 +23,45 @@ Personal and household finance management — a Progressive Web App (PWA) built 
 cp .env.example .env.local
 ```
 
-Edit `.env.local` and fill in your values from **Supabase → Settings → API**:
+Edit `.env.local`:
 
 ```env
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key-here
 ```
 
-> ⚠️ Never commit `.env.local` to version control. It is gitignored.
+> ⚠️ Never commit `.env.local`.
 
-### 3. Install dependencies
-
-Requires **Node.js 20.x LTS** and **npm**.
+### 3. Install & run
 
 ```bash
 npm install
+npm run dev        # http://localhost:5173
 ```
 
-### 4. Run the development server
+---
 
-```bash
-npm run dev
+## Deploy to Vercel
+
+1. Push to GitHub (the `phase-1-scaffold` branch or main).
+2. Import at [vercel.com](https://vercel.com/new).
+3. Set environment variables:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+4. Deploy — the included `vercel.json` handles SPA routing automatically.
+
+## Deploy to Netlify
+
+1. Connect your GitHub repo.
+2. Build command: `npm run build`
+3. Publish directory: `dist`
+4. Add a `_redirects` file inside `public/`:
+
+```
+/* /index.html 200
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+5. Set the same two env vars in Netlify's dashboard.
 
 ---
 
@@ -61,13 +71,33 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 |---|---|
 | Frontend | React 18 + TypeScript + Vite |
 | Styling | Tailwind CSS v3 + CSS custom properties |
-| State management | Zustand + TanStack Query |
-| Backend / Database | Supabase (PostgreSQL + Realtime + Auth + Storage) |
+| State | Zustand + TanStack Query v5 |
+| Backend | Supabase (PostgreSQL + Realtime + Auth) |
 | Charts | Recharts |
 | Icons | Lucide React |
 | PWA | vite-plugin-pwa + Workbox |
 | Forms | React Hook Form + Zod |
 | i18n | react-i18next (PL + EN) |
+| CSV | PapaParse |
+| Dates | date-fns |
+
+---
+
+## Feature Phases Completed
+
+| Phase | Feature |
+|---|---|
+| 1 | Scaffold, auth, routing, stores, PWA |
+| 2 | Onboarding wizard (7 steps) |
+| 3 | Wallets + Transactions CRUD |
+| 4 | Savings & Budget Envelopes |
+| 5 | Investment Portfolios + Valuations |
+| 6 | Dashboard (complete, with charts) |
+| 7 | Analytics (5 tabs, YoY, net worth) |
+| 8 | Category Manager + CSV Import |
+| 9 | Household Management + Recurring Transactions |
+| 10 | Live Exchange Rates + Currency Converter |
+| 11 | PWA polish, code splitting, error boundaries |
 
 ---
 
@@ -76,67 +106,37 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 ```
 src/
 ├── components/
-│   ├── layout/        # BottomNav, TopHeader, PageLayout
-│   └── ui/            # Toast, Button, Card, etc.
-├── hooks/             # Custom React Query hooks (added per phase)
-├── i18n/              # pl.json, en.json translation files
+│   ├── envelopes/     # Savings & budget envelope cards + forms
+│   ├── layout/        # BottomNav, TopHeader, PageLayout, FAB
+│   ├── onboarding/    # 7-step wizard
+│   ├── portfolios/    # Portfolio cards + valuation modal
+│   ├── transactions/  # TransactionCard, form modal, filters
+│   ├── ui/            # Toast, Modal, Skeleton, ErrorBoundary, etc.
+│   └── wallets/       # WalletCard + form modal
+├── hooks/             # React Query hooks for every data type
+├── i18n/              # pl.json + en.json translations
 ├── lib/               # supabase.ts, queryClient.ts, currencies.ts
 ├── pages/             # Route pages (lazy-loaded)
 │   ├── auth/          # Login, Register, Callback
-│   └── settings/      # Settings sub-pages
-├── store/             # Zustand stores (auth, ui, household)
+│   └── settings/      # Profile, Household, Categories, Import, Currencies, Recurring
+├── store/             # Zustand: authStore, uiStore, householdStore
 ├── types/             # TypeScript interfaces + Supabase Database type
-└── utils/             # formatCurrency, formatDate, calculations
-supabase/
-└── migrations/        # SQL migration files (run in Supabase SQL Editor)
+└── utils/             # formatCurrency, formatDate, calculations, csvParser
+supabase/migrations/   # SQL migration files
+vercel.json            # Vercel SPA rewrite
 ```
 
 ---
 
-## Build for production
+## PWA
 
-```bash
-npm run build
-```
-
-Output goes to `dist/`. The PWA service worker and manifest are auto-generated.
-
-## Deploy to Vercel
-
-1. Push to GitHub.
-2. Import in [Vercel](https://vercel.com).
-3. Add environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
-4. Create `vercel.json` for SPA routing:
-
-```json
-{
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
-}
-```
+The app is fully installable on iOS and Android:
+- Run `npm run build` then serve `dist/` to test locally
+- Check the Lighthouse PWA audit for a full checklist
+- The service worker (Workbox) caches exchange rates for 4 hours offline
 
 ---
 
-## Implementation Phases
+## License
 
-| Phase | Status | Description |
-|---|---|---|
-| 1 | ✅ Complete | Scaffold, auth, routing, stores, i18n |
-| 2 | ⏳ Next | Onboarding wizard (7 steps) |
-| 3 | — | Wallets + Transactions (core) |
-| 4 | — | Savings & Budget Envelopes |
-| 5 | — | Investment Portfolios |
-| 6 | — | Dashboard (complete) |
-| 7 | — | Analytics |
-| 8 | — | Category Manager + CSV Import |
-| 9 | — | Household Management + Recurring |
-| 10 | — | Live Exchange Rates |
-| 11 | — | Polish, PWA, Deployment |
-
----
-
-## Language Support
-
-- 🇵🇱 Polski (default)
-- 🇬🇧 English
-
-Language can be switched in the onboarding wizard and in Settings → Profile.
+MIT

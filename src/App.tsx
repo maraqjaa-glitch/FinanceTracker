@@ -6,6 +6,7 @@ import { queryClient } from './lib/queryClient'
 import { useAuthStore } from './store/authStore'
 import { useUIStore } from './store/uiStore'
 import ToastContainer from './components/ui/Toast'
+import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { isSupabaseConfigured } from './lib/supabase'
 import { fetchAndCacheRates, fetchBTCRate } from './lib/currencies'
 import i18n from './i18n'
@@ -84,19 +85,21 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      <ToastContainer />
-      <Suspense fallback={null}>
-        <TransactionFormModal
-          open={isAddTransactionOpen}
-          onClose={closeAddTransaction}
-        />
-        <TransactionFormModal
-          open={!!editTransactionId && !isAddTransactionOpen}
-          onClose={closeEditTransaction}
-          editId={editTransactionId}
-        />
-      </Suspense>
+      <ErrorBoundary>
+        <RouterProvider router={router} />
+        <ToastContainer />
+        <Suspense fallback={null}>
+          <TransactionFormModal
+            open={isAddTransactionOpen}
+            onClose={closeAddTransaction}
+          />
+          <TransactionFormModal
+            open={!!editTransactionId && !isAddTransactionOpen}
+            onClose={closeEditTransaction}
+            editId={editTransactionId}
+          />
+        </Suspense>
+      </ErrorBoundary>
     </QueryClientProvider>
   )
 }

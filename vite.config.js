@@ -80,4 +80,37 @@ export default defineConfig({
         port: 5173,
         host: true,
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    // Recharts into its own chunk
+                    if (id.includes('recharts') || id.includes('d3-')) {
+                        return 'recharts';
+                    }
+                    // Heavy form/validation libraries
+                    if (id.includes('zod') || id.includes('react-hook-form') || id.includes('@hookform')) {
+                        return 'schemas';
+                    }
+                    // Supabase client
+                    if (id.includes('@supabase')) {
+                        return 'supabase';
+                    }
+                    // i18next
+                    if (id.includes('i18next') || id.includes('react-i18next')) {
+                        return 'i18n';
+                    }
+                    // date-fns
+                    if (id.includes('date-fns')) {
+                        return 'date-fns';
+                    }
+                    // papaparse
+                    if (id.includes('papaparse')) {
+                        return 'papaparse';
+                    }
+                },
+            },
+        },
+        chunkSizeWarningLimit: 600,
+    },
 });
