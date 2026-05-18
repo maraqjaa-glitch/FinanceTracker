@@ -7,6 +7,7 @@ import { useAuthStore } from './store/authStore'
 import { useUIStore } from './store/uiStore'
 import ToastContainer from './components/ui/Toast'
 import { isSupabaseConfigured } from './lib/supabase'
+import { fetchAndCacheRates, fetchBTCRate } from './lib/currencies'
 import i18n from './i18n'
 import { lazy, Suspense } from 'react'
 const TransactionFormModal = lazy(() => import('./components/transactions/TransactionFormModal'))
@@ -62,7 +63,13 @@ export default function App() {
     if (!isSupabaseConfigured) return
 
     let unsubscribe: (() => void) | undefined
-    initialize().then((unsub) => { unsubscribe = unsub })
+    initialize().then((unsub) => {
+      unsubscribe = unsub
+      // After auth is ready, kick off exchange rate fetch using the user's preferred currency
+      const currency = useAuthStore.getState().profile?.preferred_currency ?? 'PLN'
+      fetchAndCacheRates(currency).catch(console.error)
+      fetchBTCRate(currency).catch(console.error)
+    })
     return () => { unsubscribe?.() }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
