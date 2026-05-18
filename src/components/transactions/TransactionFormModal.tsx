@@ -11,6 +11,7 @@ import { useCreateTransaction, useUpdateTransaction, useTransaction } from '@/ho
 import { useWallets } from '@/hooks/useWallets'
 import { useCategories } from '@/hooks/useCategories'
 import { useSavingsEnvelopes } from '@/hooks/useSavingsEnvelopes'
+import { usePortfolios } from '@/hooks/usePortfolios'
 import { useUIStore } from '@/store/uiStore'
 import { getCategoryName } from '@/types'
 import { SUPPORTED_CURRENCIES } from '@/lib/currencies'
@@ -40,6 +41,7 @@ const schema = z.object({
   wallet_id:          z.string().optional(),
   to_wallet_id:       z.string().optional(),
   savings_envelope_id:z.string().optional(),
+  portfolio_id:       z.string().optional(),
   description:        z.string().optional(),
   notes:              z.string().optional(),
   person:             z.string().optional(),
@@ -55,15 +57,18 @@ interface Props {
   presetType?: TransactionType
   /** Pre-select a savings envelope */
   presetEnvelopeId?: string | null
+  /** Pre-select a portfolio (investment type) */
+  presetPortfolioId?: string | null
 }
 
 export default function TransactionFormModal({
-  open, onClose, editId, presetType, presetEnvelopeId,
+  open, onClose, editId, presetType, presetEnvelopeId, presetPortfolioId,
 }: Props) {
   const { t }           = useTranslation()
   const { language }    = useUIStore()
   const { data: wallets = [] }  = useWallets()
   const { data: envelopes = [] } = useSavingsEnvelopes()
+  const { data: portfolios = [] } = usePortfolios()
   const createTx = useCreateTransaction()
   const updateTx = useUpdateTransaction()
   const { data: existing } = useTransaction(editId ?? null)
@@ -79,6 +84,7 @@ export default function TransactionFormModal({
         date: toISODate(new Date()),
         is_recurring: false,
         savings_envelope_id: presetEnvelopeId ?? undefined,
+        portfolio_id: presetPortfolioId ?? undefined,
       },
     })
 
@@ -86,6 +92,7 @@ export default function TransactionFormModal({
   const watchedCatId   = watch('category_id')
   const categoryType   = TYPE_TO_CATEGORY[watchedType]
   const isSavingsType  = watchedType === 'savings_deposit' || watchedType === 'savings_withdrawal'
+  const isInvestment   = watchedType === 'investment'
 
   const { data: categories = [] } = useCategories(categoryType)
   const selectedCat = categories.find(c => c.id === watchedCatId)
@@ -103,6 +110,7 @@ export default function TransactionFormModal({
         wallet_id: existing.wallet_id ?? undefined,
         to_wallet_id: existing.to_wallet_id ?? undefined,
         savings_envelope_id: existing.savings_envelope_id ?? undefined,
+        portfolio_id: existing.portfolio_id ?? undefined,
         description: existing.description ?? undefined,
         notes: existing.notes ?? undefined,
         person: existing.person ?? undefined,
@@ -116,9 +124,10 @@ export default function TransactionFormModal({
         date: toISODate(new Date()),
         is_recurring: false,
         savings_envelope_id: presetEnvelopeId ?? undefined,
+        portfolio_id: presetPortfolioId ?? undefined,
       })
     }
-  }, [existing, editId, open, presetType, presetEnvelopeId, reset])
+  }, [existing, editId, open, presetType, presetEnvelopeId, presetPortfolioId, reset])
 
   const onSubmit = async (values: FormValues) => {
     const payload = {
@@ -127,12 +136,12 @@ export default function TransactionFormModal({
       wallet_id:            values.wallet_id            || null,
       to_wallet_id:         values.to_wallet_id         || null,
       savings_envelope_id:  values.savings_envelope_id  || null,
+      portfolio_id:         values.portfolio_id         || null,
       description:          values.description          || null,
       notes:                values.notes                || null,
       person:               values.person               || null,
       tags:                 [] as string[],
       budget_envelope_id:   null,
-      portfolio_id:         null,
       amount_in_base_currency: null,
       exchange_rate: null,
       import_hash: null,
@@ -172,6 +181,7 @@ export default function TransactionFormModal({
                       field.onChange(tp)
                       setValue('category_id', undefined)
                       setValue('savings_envelope_id', undefined)
+                      setValue('portfolio_id', undefined)
                     }}
                     className="flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[10px] font-semibold transition-all"
                     style={{
@@ -243,6 +253,28 @@ export default function TransactionFormModal({
                 <option value="">— {t('common.none')} —</option>
                 {envelopes.map(e => (
                   <option key={e.id} value={e.id}>{e.icon} {e.name}</option>
+                ))}
+              </select>
+            )} />
+          </div>
+        )}
+
+        {/* ── Portfolio selector (investment type only) ── */}
+        {isInvestment && portfolios.length > 0 && (
+          <div>
+            <label className="label">
+              Portfolio <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>({t('common.optional')})</span>
+            </label>
+            <Controller name="portfolio_id" control={control} render={({ field }) => (
+              <select
+                {...field}
+                value={field.value ?? ''}
+                onChange={e => field.onChange(e.target.value || undefined)}
+                className="input"
+              >
+                <option value="">— {t('common.none')} —</option>
+                {portfolios.map(p => (
+                  <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
                 ))}
               </select>
             )} />

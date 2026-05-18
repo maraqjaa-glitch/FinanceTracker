@@ -12,6 +12,7 @@ import { useMonthTransactions, useAllTransactions } from '@/hooks/useTransaction
 import { useWallets } from '@/hooks/useWallets'
 import { useSavingsEnvelopesWithBalance } from '@/hooks/useSavingsEnvelopes'
 import { useBudgetEnvelopesWithSpend } from '@/hooks/useBudgetEnvelopes'
+import { usePortfolios, usePortfolioValuations } from '@/hooks/usePortfolios'
 import { calcWalletBalance, calcMonthlySummary } from '@/utils/calculations'
 import { formatCurrency } from '@/utils/formatCurrency'
 
@@ -42,6 +43,18 @@ export default function DashboardPage() {
   const { data: wallets = [], isLoading: wLoading } = useWallets()
   const { data: savingsEnvelopes = [], isLoading: sLoading } = useSavingsEnvelopesWithBalance()
   const { data: budgetEnvelopes = [] } = useBudgetEnvelopesWithSpend(monthTxns)
+  const { data: portfolios = [] } = usePortfolios()
+
+  // Get latest valuation for each portfolio from all transactions
+  // (lightweight: sum investment txns per portfolio for total deposited)
+  const portfolioValue = portfolios.reduce((sum, p) => {
+    // We can't call hooks inside reduce, so we approximate from allTxns
+    // Full valuation-based value shown on portfolio detail page
+    const deposited = allTxns
+      .filter(t => t.portfolio_id === p.id && t.type === 'investment')
+      .reduce((s, t) => s + t.amount, 0)
+    return sum + deposited
+  }, 0)
 
   // Monthly summary
   const summary = calcMonthlySummary(monthTxns, profile?.monthly_income)
@@ -58,7 +71,7 @@ export default function DashboardPage() {
     .filter(w => w.include_in_net_worth && w.current_balance < 0)
     .reduce((s, w) => s + Math.abs(w.current_balance), 0)
   const savingsTotal = savingsEnvelopes.reduce((s, e) => s + (e.current_balance ?? 0), 0)
-  const netWorth = totalAssets + savingsTotal - totalLiabilities
+  const netWorth = totalAssets + savingsTotal + portfolioValue - totalLiabilities
 
   // Budget alerts: envelopes ≥ 70% used
   const budgetAlerts = budgetEnvelopes.filter(e => (e.usage_percent ?? 0) >= 70)
@@ -141,7 +154,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-[10px] mb-0.5" style={{ color: 'var(--color-text-muted)' }}>{t('dashboard.assets')}</p>
                 <p className="text-sm font-semibold tabular-nums" style={{ color: '#10b981' }}>
-                  {formatCurrency(totalAssets + savingsTotal, currency, language)}
+                  {formatCurrency(totalAssets + savingsTotal + portfolioValue, currency, language)}
                 </p>
               </div>
               <div>

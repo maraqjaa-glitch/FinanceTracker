@@ -12,7 +12,8 @@ const DashboardPage   = lazy(() => import('@/pages/DashboardPage'))
 const TransactionsPage = lazy(() => import('@/pages/TransactionsPage'))
 const EnvelopesPage   = lazy(() => import('@/pages/EnvelopesPage'))
 const AnalyticsPage   = lazy(() => import('@/pages/AnalyticsPage'))
-const PortfoliosPage  = lazy(() => import('@/pages/PortfoliosPage'))
+const PortfoliosPage    = lazy(() => import('@/pages/PortfoliosPage'))
+const PortfolioDetailPage = lazy(() => import('@/pages/PortfolioDetailPage'))
 const WalletsPage       = lazy(() => import('@/pages/WalletsPage'))
 const WalletDetailPage  = lazy(() => import('@/pages/WalletDetailPage'))
 const SettingsPage    = lazy(() => import('@/pages/settings/SettingsPage'))
@@ -134,7 +135,8 @@ export const router = createBrowserRouter([
               { path: '/transactions',    element: <TransactionsPage /> },
               { path: '/envelopes',       element: <EnvelopesPage /> },
               { path: '/analytics',       element: <AnalyticsPage /> },
-              { path: '/portfolios',      element: <PortfoliosPage /> },
+              { path: '/portfolios',         element: <PortfoliosPage /> },
+              { path: '/portfolios/:id',     element: <PortfolioDetailPage /> },
               { path: '/wallets',           element: <WalletsPage /> },
               { path: '/wallets/:id',       element: <WalletDetailPage /> },
 
