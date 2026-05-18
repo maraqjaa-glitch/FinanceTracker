@@ -13,7 +13,8 @@ const TransactionsPage = lazy(() => import('@/pages/TransactionsPage'))
 const EnvelopesPage   = lazy(() => import('@/pages/EnvelopesPage'))
 const AnalyticsPage   = lazy(() => import('@/pages/AnalyticsPage'))
 const PortfoliosPage  = lazy(() => import('@/pages/PortfoliosPage'))
-const WalletsPage     = lazy(() => import('@/pages/WalletsPage'))
+const WalletsPage       = lazy(() => import('@/pages/WalletsPage'))
+const WalletDetailPage  = lazy(() => import('@/pages/WalletDetailPage'))
 const SettingsPage    = lazy(() => import('@/pages/settings/SettingsPage'))
 const ProfilePage     = lazy(() => import('@/pages/settings/ProfilePage'))
 const HouseholdPage   = lazy(() => import('@/pages/settings/HouseholdPage'))
@@ -134,7 +135,8 @@ export const router = createBrowserRouter([
               { path: '/envelopes',       element: <EnvelopesPage /> },
               { path: '/analytics',       element: <AnalyticsPage /> },
               { path: '/portfolios',      element: <PortfoliosPage /> },
-              { path: '/wallets',         element: <WalletsPage /> },
+              { path: '/wallets',           element: <WalletsPage /> },
+              { path: '/wallets/:id',       element: <WalletDetailPage /> },
 
               // Settings hub
               { path: '/settings',           element: <SettingsPage /> },

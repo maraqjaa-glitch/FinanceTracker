@@ -8,6 +8,8 @@ import { useUIStore } from './store/uiStore'
 import ToastContainer from './components/ui/Toast'
 import { isSupabaseConfigured } from './lib/supabase'
 import i18n from './i18n'
+import { lazy, Suspense } from 'react'
+const TransactionFormModal = lazy(() => import('./components/transactions/TransactionFormModal'))
 
 function SetupScreen() {
   return (
@@ -51,7 +53,7 @@ function SetupScreen() {
 
 export default function App() {
   const { initialize } = useAuthStore()
-  const { theme, accentColor, language, applyThemeToDOM } = useUIStore()
+  const { theme, accentColor, language, applyThemeToDOM, isAddTransactionOpen, closeAddTransaction, editTransactionId, closeEditTransaction } = useUIStore()
 
   useEffect(() => {
     applyThemeToDOM(theme, accentColor)
@@ -77,6 +79,17 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
       <ToastContainer />
+      <Suspense fallback={null}>
+        <TransactionFormModal
+          open={isAddTransactionOpen}
+          onClose={closeAddTransaction}
+        />
+        <TransactionFormModal
+          open={!!editTransactionId && !isAddTransactionOpen}
+          onClose={closeEditTransaction}
+          editId={editTransactionId}
+        />
+      </Suspense>
     </QueryClientProvider>
   )
 }
