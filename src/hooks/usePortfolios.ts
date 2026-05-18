@@ -38,6 +38,46 @@ async function fetchValuations(portfolioId: string): Promise<PortfolioValuation[
   return (data ?? []) as unknown as PortfolioValuation[]
 }
 
+/** Fetch the latest valuation for every portfolio in the household in a single query */
+export function useLatestPortfolioValuations() {
+  const { activeHousehold } = useHouseholdStore()
+  const hid = activeHousehold?.id ?? ''
+
+  return useQuery({
+    queryKey: ['portfolio_valuations_latest', hid],
+    queryFn: async (): Promise<Record<string, number>> => {
+      // Grab all portfolio IDs for the household first
+      const { data: portfolios, error: pErr } = await supabase
+        .from('investment_portfolios')
+        .select('id')
+        .eq('household_id', hid)
+        .eq('archived', false)
+      if (pErr) throw pErr
+      if (!portfolios?.length) return {}
+
+      // Fetch all valuations for those portfolios, ordered newest-first
+      const ids = portfolios.map(p => p.id)
+      const { data: valuations, error: vErr } = await supabase
+        .from('portfolio_valuations')
+        .select('portfolio_id, current_value, valuation_date')
+        .in('portfolio_id', ids)
+        .order('valuation_date', { ascending: false })
+      if (vErr) throw vErr
+
+      // Keep only the latest per portfolio
+      const latest: Record<string, number> = {}
+      for (const v of valuations ?? []) {
+        if (!(v.portfolio_id in latest)) {
+          latest[v.portfolio_id] = v.current_value
+        }
+      }
+      return latest
+    },
+    enabled: !!hid,
+    staleTime: 1000 * 60 * 10,
+  })
+}
+
 // ─── hooks ────────────────────────────────────
 export function usePortfolios() {
   const { activeHousehold } = useHouseholdStore()
