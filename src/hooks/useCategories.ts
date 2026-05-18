@@ -55,6 +55,25 @@ export function useCreateCategory() {
   })
 }
 
+export function useUpdateCategory() {
+  const qc = useQueryClient()
+  const { activeHousehold } = useHouseholdStore()
+  const { addToast } = useUIStore()
+
+  return useMutation({
+    mutationFn: async ({ id, ...values }: Partial<Category> & { id: string }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await supabase.from('categories').update(values as any).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: CATS_KEY(activeHousehold?.id ?? '') })
+      addToast({ type: 'success', title: 'Category updated' })
+    },
+    onError: (e: Error) => addToast({ type: 'error', title: e.message }),
+  })
+}
+
 export function useDeleteCategory() {
   const qc = useQueryClient()
   const { activeHousehold } = useHouseholdStore()
